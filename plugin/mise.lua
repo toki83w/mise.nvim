@@ -135,4 +135,11 @@ end, {
   desc = "Open the mise task picker",
 })
 
+vim.api.nvim_create_user_command("MiseRunLast", function()
+  require("mise").run_last()
+end, {
+  nargs = 0,
+  desc = "Re-run the last mise task",
+})
+
 

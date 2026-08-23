@@ -2,6 +2,10 @@ local config = require("mise.config")
 
 local M = {}
 
+--- Last run task and args, for :MiseRunLast.
+---@type { task: string, args: string[] }|nil
+local last_run = nil
+
 ---Build the shell command string for `mise run`.
 ---@param task string Task name
 ---@param args string[] Extra arguments forwarded to the task
@@ -27,6 +31,7 @@ function M.run(task, args)
     return
   end
 
+  last_run = { task = task, args = args or {} }
   local cmd = build_cmd(task, args)
   local opts = config.options.toggleterm
 
@@ -56,6 +61,15 @@ function M.run(task, args)
   else
     term:spawn()
   end
+end
+
+---Re-run the last task with the same arguments.
+function M.run_last()
+  if not last_run then
+    vim.notify("mise.nvim: no task has been run yet.", vim.log.levels.WARN)
+    return
+  end
+  M.run(last_run.task, last_run.args)
 end
 
 ---Toggle the configured mise terminal instance.

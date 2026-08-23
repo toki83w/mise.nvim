@@ -29,6 +29,11 @@ function M.toggle()
   runner.toggle()
 end
 
+---Re-run the last task.
+function M.run_last()
+  runner.run_last()
+end
+
 ---Open the MisePick telescope picker.
 function M.pick()
   require("mise.picker").pick()
