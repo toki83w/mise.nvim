@@ -76,8 +76,8 @@ local function parse_flags_from_help(text)
   return flags
 end
 
----Fetch and cache the flags for a task by running `mise run <task> -- -h`.
----Returns the cached list (possibly empty) on subsequent calls.
+---Fetch and cache the flags for a task.
+---Delegates the raw fetch/cache to mise.help so both features share one cache.
 ---@param task string
 ---@return string[]
 local function get_task_flags(task)
@@ -85,12 +85,8 @@ local function get_task_flags(task)
     return task_args_cache[task] or {}
   end
 
-  -- `mise run <task> -h` prints the task's usage (handled by mise itself).
-  local output = vim.fn.system(
-    string.format("mise run %s -h 2>&1", vim.fn.shellescape(task))
-  )
-
-  local flags = parse_flags_from_help(output)
+  local raw = require("mise.help").fetch_raw_sync(task)
+  local flags = parse_flags_from_help(raw)
   task_args_cache[task] = #flags > 0 and flags or false
   return flags
 end
@@ -174,3 +170,5 @@ end, {
   nargs = 0,
   desc = "Toggle the mise toggleterm terminal instance",
 })
+
+

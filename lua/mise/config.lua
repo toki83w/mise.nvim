@@ -14,9 +14,11 @@ local M = {}
 
 ---@class MiseOpts
 ---@field toggleterm MiseToggletermOpts
+---@field help_keymap string|false  Cmdline keymap to show the task help popup. Set to false to disable.
 
 ---@type MiseOpts
 M.defaults = {
+  help_keymap = "<C-h>",
   toggleterm = {
     direction = "tab",
     count = 33,

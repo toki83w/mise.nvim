@@ -7,6 +7,10 @@ local M = {}
 ---@param opts MiseOpts|nil
 function M.setup(opts)
   config.setup(opts)
+  local lhs = config.options.help_keymap
+  if lhs and lhs ~= "" then
+    require("mise.help").setup_keymap(lhs)
+  end
 end
 
 ---Run a mise task.

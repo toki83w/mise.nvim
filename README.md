@@ -4,7 +4,7 @@ A Neovim plugin that runs [mise](https://mise.jdx.dev/) tasks in a [toggleterm.n
 
 ## Requirements
 
-- Neovim 0.9+
+- Neovim 0.10+
 - [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
 - `mise` available in `$PATH`
 
@@ -46,6 +46,10 @@ All arguments after the task name are forwarded directly to `mise run`:
 ```
 
 Tab-completion is available for task names (powered by `mise tasks`).
+After typing a task name, press `<C-h>` to open a floating popup with the
+output of `mise run <task> -h`. Press `<C-h>` again after editing the task
+name to refresh the popup for the new task. The popup closes automatically
+when you leave the command line (Enter, Esc, `<C-c>`).
 
 ```
 :MiseToggleTerm
@@ -68,6 +72,7 @@ Call `setup()` with any options you want to override. All fields are optional.
 
 ```lua
 require("mise").setup({
+  help_keymap = "<C-h>",  -- set to false to disable the help popup
   toggleterm = {
     direction      = "tab",    -- "tab" | "float" | "horizontal" | "vertical"
     count          = 33,       -- toggleterm instance id (toggle with <count><C-\><C-n>)
@@ -84,6 +89,12 @@ require("mise").setup({
 ```
 
 ### Defaults
+
+| Option            | Default   | Description                                          |
+|-------------------|-----------|------------------------------------------------------|
+| `help_keymap`     | `"<C-h>"` | Cmdline key to show the task help popup; `false` to disable |
+
+`toggleterm` options:
 
 | Option            | Default   | Description                                          |
 |-------------------|-----------|------------------------------------------------------|
