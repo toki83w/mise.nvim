@@ -171,4 +171,11 @@ end, {
   desc = "Toggle the mise toggleterm terminal instance",
 })
 
+vim.api.nvim_create_user_command("MisePick", function()
+  require("mise").pick()
+end, {
+  nargs = 0,
+  desc = "Open the mise task picker",
+})
+
 

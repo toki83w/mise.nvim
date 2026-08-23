@@ -29,4 +29,9 @@ function M.toggle()
   runner.toggle()
 end
 
+---Open the MisePick telescope picker.
+function M.pick()
+  require("mise.picker").pick()
+end
+
 return M

@@ -5,7 +5,8 @@ A Neovim plugin that runs [mise](https://mise.jdx.dev/) tasks in a [toggleterm.n
 ## Requirements
 
 - Neovim 0.10+
-- [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
+- [toggleterm.nvim](https://github.com/toki83w/toggleterm.nvim)
+- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (optional, for `:MisePick`)
 - `mise` available in `$PATH`
 
 ## Installation
@@ -14,8 +15,8 @@ A Neovim plugin that runs [mise](https://mise.jdx.dev/) tasks in a [toggleterm.n
 
 ```lua
 {
-  "your-username/mise.nvim",
-  dependencies = { "akinsho/toggleterm.nvim" },
+  "toki83w/mise.nvim",
+  dependencies = { "toki83w/toggleterm.nvim" },
   opts = {}, -- uses defaults; see Configuration below
 }
 ```
@@ -24,8 +25,8 @@ A Neovim plugin that runs [mise](https://mise.jdx.dev/) tasks in a [toggleterm.n
 
 ```lua
 use {
-  "your-username/mise.nvim",
-  requires = { "akinsho/toggleterm.nvim" },
+  "toki83w/mise.nvim",
+  requires = { "toki83w/toggleterm.nvim" },
   config = function()
     require("mise").setup()
   end,
@@ -58,6 +59,27 @@ when you leave the command line (Enter, Esc, `<C-c>`).
 Toggles the mise terminal instance open/closed. Equivalent to the standard
 toggleterm keybind for the configured `count`. Shows a warning if no task has
 been run yet.
+
+```
+:MisePick
+```
+
+Opens a Telescope picker listing all available tasks. The preview pane shows
+each task's arguments, defaults, and choices. Selecting a task with `<CR>`:
+
+- Runs it immediately if it takes no arguments.
+- Opens an argument form if it has arguments.
+
+In the argument form:
+
+- `j` / `k` move between fields.
+- `<Space>` / `<CR>` toggle boolean flags or open an input prompt for value flags.
+- `<CR>` on `[Run]` executes the task with the configured arguments.
+- `<Esc>` / `q` cancel.
+
+In the picker, `<C-r>` invalidates the task cache and refreshes the list.
+
+Requires [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim).
 
 ### Lua API
 
