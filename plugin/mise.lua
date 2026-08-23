@@ -24,101 +24,46 @@ end
 -- Completion helpers
 -- ---------------------------------------------------------------------------
 
---- Cache of task-name → list of --flag strings parsed from `mise run <task> --help`.
---- A sentinel value of `false` means we already tried and found nothing.
----@type table<string, string[]|false>
-local task_args_cache = {}
-
----Extract --flag / -f style arguments from a help text string.
----
----Only scans lines where a flag token (-x or --word) appears as the first
----non-whitespace content.  This avoids picking up single letters from prose,
----example values, or descriptions.
----
----Handles common help formats:
----  "  -b --build-type [type]   Build type"   → -b, --build-type
----  "  --tests                  Build tests"  → --tests
----  "  -u, --update             Check …"      → -u, --update
----
----@param text string Raw stdout/stderr from `mise run <task> -- --help`
----@return string[]
-local function parse_flags_from_help(text)
-  local seen = {}
-  local flags = {}
-
-  for line in text:gmatch("[^\n]+") do
-    -- A flag line: leading whitespace, then immediately a "-"
-    if line:match("^%s+%-") or line:match("^%-") then
-      -- Extract every -x and --word token from this line.
-      -- Stop collecting once we hit the description text: we consider the
-      -- description to start at the first token that is NOT a flag or a
-      -- meta-variable (all-caps word, bracketed word, or comma).
-      for token in line:gmatch("%S+") do
-        local long  = token:match("^(%-%-[%w][%w%-]*)") -- --flag or --flag-name
-        local short = token:match("^(-[%a%d])$")        -- -x (exactly one char)
-        local flag  = long or short
-        if flag then
-          if not seen[flag] then
-            seen[flag] = true
-            flags[#flags + 1] = flag
-          end
-        elseif not token:match("^[%[%(<]")   -- meta-var: [TYPE], <TYPE>, (TYPE)
-            and not token:match("^[A-Z_]+$")  -- meta-var: TYPE, BUILD_TYPE
-            and not token:match("^,$")        -- separator comma
-        then
-          -- First non-flag, non-meta token → description starts, stop this line
-          break
-        end
-      end
+---Return parsed MiseArg list for a task from the JSON cache.
+---@param task string
+---@return MiseArg[]
+local function get_task_args(task)
+  local tasks_mod = require("mise.tasks")
+  for _, t in ipairs(tasks_mod.fetch_sync()) do
+    if t.name == task then
+      return tasks_mod.parse_usage(t.usage or "")
     end
   end
-
-  return flags
-end
-
----Fetch and cache the flags for a task.
----Delegates the raw fetch/cache to mise.help so both features share one cache.
----@param task string
----@return string[]
-local function get_task_flags(task)
-  if task_args_cache[task] ~= nil then
-    return task_args_cache[task] or {}
-  end
-
-  local raw = require("mise.help").fetch_raw_sync(task)
-  local flags = parse_flags_from_help(raw)
-  task_args_cache[task] = #flags > 0 and flags or false
-  return flags
+  return {}
 end
 
 ---Parse the command line to determine:
 ---  1. The task name (first argument after the command).
----  2. How many whitespace-separated tokens sit between the command and the
----     current incomplete word (arg_lead).
+---  2. How many whitespace-separated tokens precede the current incomplete word.
 ---@param cmd_line string
 ---@param arg_lead string
----@return string task, integer completed_count
+---@return string task, integer completed_count, string|nil prev_token
 local function parse_cmd_line(cmd_line, arg_lead)
-  -- Strip the Vim command name from the front.
   local rest = cmd_line:match("^%s*%S+%s+(.*)") or ""
-  -- Remove the trailing incomplete word so we can count completed tokens.
   local before_lead = rest:sub(1, #rest - #arg_lead)
   local tokens = {}
   for tok in before_lead:gmatch("%S+") do
     tokens[#tokens + 1] = tok
   end
   local task = tokens[1] or ""
-  return task, #tokens
+  local prev_token = tokens[#tokens]  -- token immediately before arg_lead
+  return task, #tokens, prev_token
 end
 
 ---Unified completion function for :MiseRun.
----  - Position 1 (task name): complete from `mise tasks`.
----  - Position ≥ 2 (task args): complete --flags from `mise run <task> --help`.
+---  - Position 1 (task name): complete from `mise tasks --json`.
+---  - Position >= 2, previous token is a value flag with choices: complete choices.
+---  - Position >= 2, otherwise: complete --flags.
 ---@param arg_lead string
 ---@param cmd_line string
 ---@return string[]
 local function complete_mise_run(arg_lead, cmd_line)
-  local task, completed_count = parse_cmd_line(cmd_line, arg_lead)
+  local task, completed_count, prev_token = parse_cmd_line(cmd_line, arg_lead)
 
   -- ── First argument: task name ──────────────────────────────────────────
   if completed_count == 0 then
@@ -133,19 +78,31 @@ local function complete_mise_run(arg_lead, cmd_line)
     return tasks
   end
 
-  -- ── Subsequent arguments: flags from --help ────────────────────────────
-  -- Only offer flag completions when the user has started typing "--".
-  if task == "" then
-    return {}
+  if task == "" then return {} end
+
+  local args = get_task_args(task)
+  if #args == 0 then return {} end
+
+  -- ── Previous token is a value flag with choices: complete the value ────
+  if prev_token then
+    for _, arg in ipairs(args) do
+      if not arg.is_bool and #arg.choices > 0 and arg.flag == prev_token then
+        local matches = {}
+        for _, choice in ipairs(arg.choices) do
+          if vim.startswith(choice, arg_lead) then
+            matches[#matches + 1] = choice
+          end
+        end
+        return matches
+      end
+    end
   end
-  local flags = get_task_flags(task)
-  if #flags == 0 then
-    return {}
-  end
+
+  -- ── Otherwise: complete flag names ────────────────────────────────────
   local matches = {}
-  for _, flag in ipairs(flags) do
-    if vim.startswith(flag, arg_lead) then
-      matches[#matches + 1] = flag
+  for _, arg in ipairs(args) do
+    if vim.startswith(arg.flag, arg_lead) then
+      matches[#matches + 1] = arg.flag
     end
   end
   return matches
