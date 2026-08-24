@@ -57,10 +57,19 @@ local function open_picker()
       local buf = self.state.bufnr
       local lines = {}
 
+      -- Helper: append a string that may contain embedded newlines as separate lines.
+      local function push(prefix, s)
+        local first = true
+        for _, l in ipairs(vim.split(s, "\n", { plain = true })) do
+          lines[#lines + 1] = (first and prefix or string.rep(" ", #prefix)) .. l
+          first = false
+        end
+      end
+
       -- Header
       lines[#lines + 1] = "Task:  " .. entry.value.name
       if entry.value.description ~= "" then
-        lines[#lines + 1] = "       " .. entry.value.description
+        push("       ", entry.value.description)
       end
       lines[#lines + 1] = ""
 
@@ -104,7 +113,10 @@ local function open_picker()
         end
       end
 
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      vim.bo[buf].modifiable = true
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      vim.bo[buf].modifiable = false
       vim.bo[buf].filetype = "text"
     end,
   })
@@ -145,8 +157,13 @@ local function open_picker()
 
   -- ── Build picker ─────────────────────────────────────────────────────────
   pickers.new({}, {
-    prompt_title  = "Mise Tasks",
-    results_title = "Tasks",
+    prompt_title    = "Mise Tasks",
+    results_title   = "Tasks",
+    -- Use ascending to avoid a Telescope bug with descending strategy on
+    -- Nvim 0.12: get_result_completor fires via vim.schedule_wrap after the
+    -- results window can be resized, making max_results - visible_rows go out
+    -- of range for nvim_win_set_cursor.
+    sorting_strategy = "ascending",
 
     finder = finders.new_table({
       results = entries,
@@ -154,7 +171,8 @@ local function open_picker()
         -- Returns (display_string, highlights) so we can dim the description.
         local display = function(_entry)
           local name = _entry.value.name
-          local desc = _entry.value.description
+          -- Truncate at first newline so the results list stays single-line.
+          local desc = (_entry.value.description:match("^([^\n]*)") or _entry.value.description)
           local gap  = 4
           local padded_name = name .. string.rep(" ", max_name_w - #name + gap)
           if desc == "" then
