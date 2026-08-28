@@ -86,7 +86,9 @@ local function complete_mise_run(arg_lead, cmd_line)
   -- ── Previous token is a value flag with choices: complete the value ────
   if prev_token then
     for _, arg in ipairs(args) do
-      if not arg.is_bool and #arg.choices > 0 and arg.flag == prev_token then
+      if not arg.is_bool and #arg.choices > 0
+        and (arg.flag == prev_token or arg.short == prev_token)
+      then
         local matches = {}
         for _, choice in ipairs(arg.choices) do
           if vim.startswith(choice, arg_lead) then
@@ -103,6 +105,9 @@ local function complete_mise_run(arg_lead, cmd_line)
   for _, arg in ipairs(args) do
     if vim.startswith(arg.flag, arg_lead) then
       matches[#matches + 1] = arg.flag
+    end
+    if arg.short and vim.startswith(arg.short, arg_lead) then
+      matches[#matches + 1] = arg.short
     end
   end
   return matches

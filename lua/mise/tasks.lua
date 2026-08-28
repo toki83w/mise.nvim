@@ -34,6 +34,7 @@ function M.parse_usage(usage)
 
   ---@class MiseArg
   ---@field flag    string   Display name: "--long-name" or "-s" if no long
+  ---@field short   string|nil  Short flag including dash, e.g. "-b" (nil if none)
   ---@field key     string   mise template key (e.g. "build_type" from --build-type)
   ---@field help    string
   ---@field default string|nil
@@ -166,6 +167,7 @@ function M.parse_usage(usage)
 
         args[#args + 1] = {
           flag     = flag_display,
+          short    = short and ("-" .. short) or nil,
           key      = key,
           help     = help,
           default  = default,
