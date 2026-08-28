@@ -7,6 +7,7 @@ A Neovim plugin that runs [mise](https://mise.jdx.dev/) tasks in a [toggleterm.n
 - Neovim 0.10+
 - [toggleterm.nvim](https://github.com/toki83w/toggleterm.nvim)
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (optional, for `:MisePick`)
+- [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) (optional, for the status component)
 - `mise` available in `$PATH`
 
 ## Installation
@@ -46,11 +47,18 @@ All arguments after the task name are forwarded directly to `mise run`:
 :MiseRun test unit              →  mise run test unit
 ```
 
-Tab-completion is available for task names (powered by `mise tasks`).
+Tab-completion is available for task names (powered by `mise tasks`). Both
+long (`--build-type`) and short (`-b`) flag forms are completed. After
+completing a flag that has a fixed set of choices, pressing `<Tab>` again
+completes the allowed values.
+
 After typing a task name, press `<C-h>` to open a floating popup with the
 output of `mise run <task> -h`. Press `<C-h>` again after editing the task
 name to refresh the popup for the new task. The popup closes automatically
 when you leave the command line (Enter, Esc, `<C-c>`).
+
+If a task is already running when `:MiseRun` is called, it is terminated
+before the new task starts.
 
 ```
 :MiseToggleTerm
@@ -74,6 +82,7 @@ In the argument form:
 
 - `j` / `k` move between fields.
 - `<Space>` / `<CR>` toggle boolean flags or open an input prompt for value flags.
+- `<Tab>` / `<S-Tab>` cycle forward/backward through choices for value flags.
 - `<CR>` on `[Run]` executes the task with the configured arguments.
 - `<Esc>` / `q` cancel.
 
@@ -139,6 +148,62 @@ Because every `:MiseRun` call uses the same `count` (default `33`), you can togg
 -- With toggleterm default setup:
 vim.keymap.set("n", "<leader>mt", "<cmd>33ToggleTerm<cr>", { desc = "Toggle mise terminal" })
 ```
+
+## Lualine Component
+
+mise.nvim ships a lualine component that displays the status of the current
+task in the statusline.
+
+```lua
+require("lualine").setup({
+  sections = {
+    lualine_x = { "mise" },
+  },
+})
+```
+
+Or with options:
+
+```lua
+require("lualine").setup({
+  sections = {
+    lualine_x = {
+      {
+        "mise",
+        colored        = true,   -- color the symbol by status
+        show_task_name = false,  -- prefix symbol with the task name
+        hide_on_idle   = true,   -- hide component when no task has been run
+        symbols = {
+          running = "󰑮 ",
+          success = "󰄴 ",
+          failure = "󰅚 ",
+        },
+      },
+    },
+  },
+})
+```
+
+### Component options
+
+| Option           | Default   | Description                                              |
+|------------------|-----------|----------------------------------------------------------|
+| `colored`        | `true`    | Color the symbol using status-specific highlight groups  |
+| `show_task_name` | `false`   | Prepend the task name to the symbol, e.g. `build 󰄴 `   |
+| `hide_on_idle`   | `true`    | Hide the component when no task has been run yet         |
+| `symbols`        | see above | Map of status → display string                           |
+
+Status colors (used when `colored = true`, fall back to these if the highlight
+groups are not defined by your theme):
+
+| Status    | Default color |
+|-----------|---------------|
+| `running` | `#e5c07b` (yellow) |
+| `success` | `#98c379` (green)  |
+| `failure` | `#e06c75` (red)    |
+
+The component is `idle` (hidden by default) until the first `:MiseRun`. It
+returns to `idle` when the terminal buffer is wiped.
 
 ## License
 
