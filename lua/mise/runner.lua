@@ -1,4 +1,5 @@
 local config = require("mise.config")
+local state  = require("mise.state")
 
 local M = {}
 
@@ -45,6 +46,9 @@ function M.run(task, args)
     existing:shutdown()
   end
 
+  state.task   = task
+  state.status = "running"
+
   local term = toggleterm.Terminal:new({
     cmd = cmd,
     count = opts.count,
@@ -59,7 +63,30 @@ function M.run(task, args)
     on_open = function(t)
       t:scroll_bottom()
     end,
+    on_exit = function(_, _, exit_code)
+      state.status = exit_code == 0 and "success" or "failure"
+    end,
   })
+
+  -- Reset to idle when the terminal buffer is wiped (e.g. manually closed).
+  local function on_buf_wipeout()
+    if state.task == task then
+      state.task   = nil
+      state.status = "idle"
+    end
+  end
+
+  -- The bufnr is assigned during spawn/open, so we defer the autocmd setup.
+  vim.schedule(function()
+    local t = toggleterm.get(opts.count)
+    if t and t.bufnr and vim.api.nvim_buf_is_valid(t.bufnr) then
+      vim.api.nvim_create_autocmd("BufWipeout", {
+        buffer  = t.bufnr,
+        once    = true,
+        callback = on_buf_wipeout,
+      })
+    end
+  end)
 
   if opts.open_on_start then
     term:open()
