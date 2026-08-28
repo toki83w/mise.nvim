@@ -50,9 +50,7 @@ function M.run(task, args)
     start_in_insert = opts.start_in_insert,
     -- Notify user when a new task replaces the previous one
     on_open = function(t)
-      if opts.start_in_insert then
-        vim.cmd("startinsert!")
-      end
+      t:scroll_bottom()
     end,
   })
 
