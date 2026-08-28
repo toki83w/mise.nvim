@@ -35,8 +35,16 @@ function M.run(task, args)
   local cmd = build_cmd(task, args)
   local opts = config.options.toggleterm
 
-  -- Re-use the same terminal instance across multiple runs so the user can
-  -- toggle it with the standard toggleterm keybind.
+  -- If a terminal already exists for our count, kill any running process and
+  -- tear it down so the new Terminal:new() below gets a clean slate.
+  local existing = toggleterm.get(opts.count)
+  if existing then
+    if not existing.exited and existing.job_id then
+      vim.fn.jobstop(existing.job_id)
+    end
+    existing:shutdown()
+  end
+
   local term = toggleterm.Terminal:new({
     cmd = cmd,
     count = opts.count,
@@ -48,7 +56,6 @@ function M.run(task, args)
     use_shell = opts.use_shell,
     keep_after_exit = opts.keep_after_exit,
     start_in_insert = opts.start_in_insert,
-    -- Notify user when a new task replaces the previous one
     on_open = function(t)
       t:scroll_bottom()
     end,
